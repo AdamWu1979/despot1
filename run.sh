@@ -117,6 +117,12 @@ then
 fi
 
 
+mkdir -p $out_folder
+out_folder=`realpath $out_folder`
+
+
+
+
 participants=$in_bids/participants.tsv
 
 work_folder=$out_folder/work
@@ -193,11 +199,11 @@ mkdir -p ${subj_work_dir} # for intermediate files
 mkdir -p $subj_final_dir # for final output
 
 
-echo "Processing subject $subjid"
+echo "Processing subject $subj_sess_prefix"
 
-anatdir=$datadir/$subjid/anat
+anatdir=$in_bids/$subj_sess_dir/anat
+out_anat=$subj_final_dir
 
-out_anat=$bidsout/$subjid/anat
 mkdir -p $out_anat
 
 
@@ -208,6 +214,9 @@ spgr_match="$anatdir/*acq-SPGR_*DESPOT.nii.gz"
 
 nspgr=`ls $spgr_match | wc -l`
 
+
+echo spgr_match $spgr_match
+echo nspgr $nspgr
 
 
 spgr_notmatched=0
@@ -221,6 +230,10 @@ do
  spgr_tr[$i]=`bashcalc ${spgr_tr[$i]}*1000`
  spgr_fa[$i]=`getValueJson.py $json FlipAngle` 
  spgr_nii[$i]=$spgr
+ 
+ echo spgr_tr[$i] ${spgr_tr[$i]}
+ echo spgr_fa[$i] ${spgr_fa[$i]}
+ echo spgr_nii[$i] ${spgr_nii[$i]}
 
  if [ "$i" = 1 ]
  then
@@ -256,10 +269,17 @@ irspgr_nii=`ls $irspgr_match`
 json=${irspgr_nii%%.nii.gz}.json
 
  irspgr_ti=`getValueJson.py $json InversionTime` #get value, from s to ms
- irspgr_ti[$i]=`bashcalc ${irspgr_ti[$i]}*1000`
+ irspgr_ti=`bashcalc ${irspgr_ti}*1000`
+# irspgr_ti[$i]=`bashcalc ${irspgr_ti[$i]}*1000`
  irspgr_tr=`getValueJson.py $json RepetitionTime` #get value, from s to ms
- irspgr_tr[$i]=`bashcalc ${irspgr_tr[$i]}*1000`
+ irspgr_tr=`bashcalc ${irspgr_tr}*1000`
+# irspgr_tr[$i]=`bashcalc ${irspgr_tr[$i]}*1000`
  irspgr_fa=`getValueJson.py $json FlipAngle` 
+
+ echo irspgr_tr ${irspgr_tr}
+ echo irspgr_ti ${irspgr_ti}
+ echo irspgr_fa ${irspgr_fa}
+ echo irspgr_nii ${irspgr_nii}
 
 
 
@@ -379,11 +399,12 @@ do
 done
 
 
-cp -v $subj_work_dir/DESPOT1HIFI_T1Map.nifti.nii.gz $out_anat/${subjid}_acq-DESPOT_T1map.nii.gz
-cp -v $subj_work_dir/DESPOT1HIFI_B1Map.nifti.nii.gz $out_anat/${subjid}_acq-DESPOT_B1map.nii.gz
-cp -v $subj_work_dir/DESPOT1HIFI_MoMap.nifti.nii.gz $out_anat/${subjid}_acq-DESPOT_Momap.nii.gz
+cp -v $subj_work_dir/DESPOT1HIFI_T1Map.nifti.nii.gz $out_anat/${subj_sess_prefix}_acq-DESPOT_T1map.nii.gz
+cp -v $subj_work_dir/DESPOT1HIFI_B1Map.nifti.nii.gz $out_anat/${subj_sess_prefix}_acq-DESPOT_B1map.nii.gz
+cp -v $subj_work_dir/DESPOT1HIFI_MoMap.nifti.nii.gz $out_anat/${subj_sess_prefix}_acq-DESPOT_M0map.nii.gz
 
 
+done
 
 done
 
