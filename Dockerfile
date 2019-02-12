@@ -1,4 +1,4 @@
-FROM khanlab/neuroglia-core:v1.5
+FROM khanlab/neuroglia-core:v1.4
 MAINTAINER <alik@robarts.ca>
 
 
