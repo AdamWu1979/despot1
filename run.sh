@@ -207,17 +207,21 @@ out_anat=$subj_final_dir
 mkdir -p $out_anat
 
 
+#these are generated from below
+t1map=$subj_work_dir/DESPOT1HIFI_T1Map.nifti.nii.gz
+m0map=$subj_work_dir/DESPOT1HIFI_MoMap.nifti.nii.gz
+b1map=$subj_work_dir/DESPOT1HIFI_B1Map.nifti.nii.gz
+
+if [ ! -e $t1map -o ! -e $m0map -o ! -e $b1map ]
+then
+
 
 despottype=2 	#hifi
-
 spgr_match="$anatdir/*acq-SPGR_*DESPOT.nii.gz"
-
 nspgr=`ls $spgr_match | wc -l`
-
 
 echo spgr_match $spgr_match
 echo nspgr $nspgr
-
 
 spgr_notmatched=0
 for i in `seq 1 $nspgr`
@@ -282,14 +286,11 @@ json=${irspgr_nii%%.nii.gz}.json
  echo irspgr_nii ${irspgr_nii}
 
 
-
-
 #hardcoded from pulse sequence:
 
 npulse=78  #readout pulses following inversion
 field=3  #field strength
 invmode=2  #number of inversions per slice
-
 
 
 noiseth=1  #noise threshold scale
@@ -395,13 +396,48 @@ do
    echo fslswapdim $nii -x y z $nii
    fslswapdim $nii -x y z $nii
 
-
 done
 
+else 
+     echo "skipping despot1 pre-proc and fitting, since files exist already"
+fi
 
-cp -v $subj_work_dir/DESPOT1HIFI_T1Map.nifti.nii.gz $out_anat/${subj_sess_prefix}_acq-DESPOT_T1map.nii.gz
-cp -v $subj_work_dir/DESPOT1HIFI_B1Map.nifti.nii.gz $out_anat/${subj_sess_prefix}_acq-DESPOT_B1map.nii.gz
-cp -v $subj_work_dir/DESPOT1HIFI_MoMap.nifti.nii.gz $out_anat/${subj_sess_prefix}_acq-DESPOT_M0map.nii.gz
+
+
+#create syn T1w image 
+t1w=$subj_work_dir/DESPOT1HIFI_T1w.nifti.nii.gz
+octave --path $execpath/matlab --eval "genDespotSynT1w('$t1map','$t1w')"
+#echo "addpath('$execpath/matlab'); genDespotSynT1w('$t1map','$t1w')" | matlab -nodisplay -nosplash
+
+#use M0map to generate soft-masked perform skull-stripping on M0map, then apply to 
+softmask=$subj_work_dir/DESPOT1HIFI_MoMap_softmask.nifti.nii.gz
+hardmask=$subj_work_dir/DESPOT1HIFI_MoMap_hardmask.nifti.nii.gz
+
+$execpath/bin/genSoftMaskM0 $m0map $hardmask $softmask
+t1map_brain=$subj_work_dir/DESPOT1HIFI_T1Map_brain.nifti.nii.gz
+m0map_brain=$subj_work_dir/DESPOT1HIFI_MoMap_brain.nifti.nii.gz
+b1map_brain=$subj_work_dir/DESPOT1HIFI_B1Map_brain.nifti.nii.gz
+t1w_brain=$subj_work_dir/DESPOT1HIFI_T1w_brain.nifti.nii.gz
+
+#use softmasking for all but m0map
+fslmaths $softmask  -mul $t1map $t1map_brain
+fslmaths $softmask  -mul $b1map $b1map_brain
+fslmaths $softmask  -mul $t1w $t1w_brain
+fslmaths $hardmask -mul $m0map $m0map_brain
+
+
+#copy unmasked data
+cp -v $t1map $out_anat/${subj_sess_prefix}_acq-DESPOT_T1map.nii.gz
+cp -v $b1map  $out_anat/${subj_sess_prefix}_acq-DESPOT_B1map.nii.gz
+cp -v $m0map $out_anat/${subj_sess_prefix}_acq-DESPOT_M0map.nii.gz
+cp -v $t1w $out_anat/${subj_sess_prefix}_acq-DESPOT_T1w.nii.gz
+
+#copy masked data
+cp -v $t1map_brain $out_anat/${subj_sess_prefix}_acq-DESPOT_proc-masked_T1map.nii.gz
+cp -v $b1map_brain  $out_anat/${subj_sess_prefix}_acq-DESPOT_proc-masked_B1map.nii.gz
+cp -v $m0map_brain $out_anat/${subj_sess_prefix}_acq-DESPOT_proc-masked_M0map.nii.gz
+cp -v $t1w_brain $out_anat/${subj_sess_prefix}_acq-DESPOT_proc-masked_T1w.nii.gz
+
 
 
 done

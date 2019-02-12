@@ -1,0 +1,52 @@
+#!/bin/bash
+
+if [ "$#" -lt 3 ]
+then
+ echo "Usage: $0 <in m0 map> <out hard mask> <out soft mask>"
+ exit 1
+fi
+
+
+m0=$1
+hardmask=$2
+softmask=$3
+
+m0=`realpath $m0`
+
+work_dir=${m0%/*}/scratch
+mkdir -p $work_dir
+
+
+bet=${work_dir}/m0_bet.nii.gz
+n4=${work_dir}/m0_bet_n4.nii.gz
+
+if [ ! -e $bet ]
+then
+bet $m0 $bet -v
+fi
+if [ ! -e $n4 ]
+then
+fslmaths $bet -bin $hardmask
+N4BiasFieldCorrection -i $bet -o $n4 -x $hardmask -c [600x500x500x400x200,0]  -v
+fi
+
+P=10
+
+
+
+
+th=`fslstats $n4 -P $P`
+
+echo fslmaths ${n4} -uthr $th ${n4%.nii.gz}_uthr.nii.gz
+fslmaths ${n4} -uthr $th ${n4%.nii.gz}_uthr.nii.gz
+
+maxval=`fslstats ${n4%.nii.gz}_uthr.nii.gz -R | awk '{print $2}'`
+
+#norm to 0-1
+echo fslmaths ${n4%.nii.gz}_uthr.nii.gz -div $maxval ${n4%.nii.gz}_uthr_norm1.nii.gz
+fslmaths ${n4%.nii.gz}_uthr.nii.gz -div $maxval ${n4%.nii.gz}_uthr_norm1.nii.gz
+
+#add back flat foreground
+echo fslmaths ${n4%.nii.gz}.nii.gz -thr $th -bin -add ${n4%.nii.gz}_uthr_norm1.nii.gz $softmask
+fslmaths ${n4%.nii.gz}.nii.gz -thr $th -bin -add ${n4%.nii.gz}_uthr_norm1.nii.gz $softmask
+
