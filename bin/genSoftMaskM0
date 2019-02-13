@@ -27,7 +27,7 @@ fi
 if [ ! -e $n4 ]
 then
 fslmaths $bet -bin $hardmask
-N4BiasFieldCorrection -i $bet -o $n4 -x $hardmask -c [600x500x500x400x200,0]  -v
+N4BiasFieldCorrection -i $bet -o $n4 -x $hardmask -c [600x500x500x400x200,0] 
 fi
 
 P=10
