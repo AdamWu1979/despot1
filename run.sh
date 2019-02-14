@@ -272,9 +272,15 @@ fi
 irspgr_nii=`ls $irspgr_match`
 json=${irspgr_nii%%.nii.gz}.json
 
+
  irspgr_ti=`getValueJson.py $json InversionTime` #get value, from s to ms
- irspgr_ti=`bashcalc ${irspgr_ti}*1000`
-# irspgr_ti[$i]=`bashcalc ${irspgr_ti[$i]}*1000`
+ if [ -n "$irspgr_ti" ]
+ then
+   irspgr_ti=`bashcalc ${irspgr_ti}*1000`
+ else
+   irspgr_ti=450
+ fi
+
  irspgr_tr=`getValueJson.py $json RepetitionTime` #get value, from s to ms
  irspgr_tr=`bashcalc ${irspgr_tr}*1000`
 # irspgr_tr[$i]=`bashcalc ${irspgr_tr[$i]}*1000`
